@@ -1,36 +1,193 @@
-/* ==========================================================================
-   Interactions layer — scroll-reveal presentation (GLOBAL, not section-scoped).
-   --------------------------------------------------------------------------
-   Behavior lives in src/interactions.ts; ALL reveal CSS lives here (never in
-   section files). Contract: docs/ARCHITECTURE.md §9 · docs/spec/40-interactions.md.
+/* Motion layer: purposeful page entrances, one-shot content reveals, and
+   interruptible interaction feedback. The page remains complete without JS. */
 
-   The `html.js` gate is the no-JS safety net: interactions.ts stamps
-   <html class="js"> at init, so [data-reveal] blocks are hidden ONLY while JS is
-   present to reveal them again. With no JS the class is never added and every
-   block stays fully visible — content is never hidden unconditionally.
-   ========================================================================== */
+:root {
+  --ease-out-expo: cubic-bezier(.19, 1, .22, 1);
+  --ease-out-quad: cubic-bezier(.25, .46, .45, .94);
+  --ease-in-out-cubic: cubic-bezier(.645, .045, .355, 1);
+  interpolate-size: allow-keywords;
+}
 
-/* Hidden entry state — applied only when JS is running (html.js present). */
-html.js [data-reveal] {
+/* First view ------------------------------------------------------------ */
+
+@keyframes header-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes hero-copy-enter {
+  from { opacity: 0; transform: translate3d(0, 20px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes hero-art-enter {
+  from { opacity: 0; transform: translate3d(0, 22px, 0) scale(.98); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes collage-one-enter {
+  from { opacity: 0; transform: translate3d(-18px, 18px, 0) rotate(-12deg) scale(.96); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) rotate(-9deg) scale(1); }
+}
+
+@keyframes collage-two-enter {
+  from { opacity: 0; transform: translate3d(18px, 14px, 0) rotate(13deg) scale(.96); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) rotate(10deg) scale(1); }
+}
+
+@keyframes collage-three-enter {
+  from { opacity: 0; transform: translate3d(14px, 24px, 0) rotate(-10deg) scale(.96); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) rotate(-7deg) scale(1); }
+}
+
+@keyframes mascot-enter {
+  from { opacity: 0; transform: translate3d(0, 12px, 0) rotate(6deg) scale(.92); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) rotate(14deg) scale(1); }
+}
+
+.site-header {
+  animation: header-enter 320ms var(--ease-out-expo) both;
+}
+
+.hero > :first-child {
+  animation: hero-copy-enter 620ms var(--ease-out-expo) 60ms both;
+}
+
+.about-image,
+.company-art,
+.events-mascot {
+  animation: hero-art-enter 680ms var(--ease-out-expo) 130ms both;
+}
+
+.collage-photo--one {
+  animation: collage-one-enter 760ms var(--ease-out-expo) 100ms both;
+}
+
+.collage-photo--two {
+  animation: collage-two-enter 760ms var(--ease-out-expo) 170ms both;
+}
+
+.collage-photo--three {
+  animation: collage-three-enter 760ms var(--ease-out-expo) 240ms both;
+}
+
+.hero-collage > .mascot {
+  animation: mascot-enter 640ms var(--ease-out-expo) 330ms both;
+}
+
+/* Scroll reveals ------------------------------------------------------- */
+
+html.motion-ready [data-reveal="block"] {
   opacity: 0;
-  translate: 0 24px;
+  transform: translate3d(0, 24px, 0);
   transition:
-    opacity 0.5s ease-out,
-    translate 0.5s ease-out;
+    opacity 560ms var(--ease-out-expo),
+    transform 560ms var(--ease-out-expo);
 }
 
-/* Revealed state — interactions.ts adds .is-revealed on first viewport entry. */
-html.js [data-reveal].is-revealed {
+html.motion-ready [data-reveal="block"].is-revealed {
   opacity: 1;
-  translate: 0;
+  transform: translate3d(0, 0, 0);
 }
 
-/* Reduced motion: neutralize the reveal — no hidden state, no slide, no transition
-   (interactions.ts also reveals everything immediately in this mode). */
+html.motion-ready [data-reveal="list"] > * {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  transition:
+    opacity 520ms var(--ease-out-expo),
+    transform 520ms var(--ease-out-expo);
+  transition-delay: calc(var(--reveal-order, 0) * 45ms);
+}
+
+html.motion-ready [data-reveal="list"].is-revealed > * {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+/* Tactile controls ----------------------------------------------------- */
+
+.button svg,
+.contact-link svg {
+  transition: transform 180ms var(--ease-out-expo);
+}
+
+.faq-plus,
+.menu-lines {
+  transition: transform 220ms var(--ease-in-out-cubic);
+}
+
+.mobile-menu[open] .menu-lines {
+  transform: rotate(90deg);
+}
+
+.faq[open] .faq-plus {
+  transform: rotate(45deg);
+}
+
+/* Modern details animation; unsupported browsers retain native disclosure. */
+.faq::details-content,
+.mobile-menu::details-content {
+  block-size: 0;
+  overflow: clip;
+  opacity: 0;
+  transition:
+    block-size 240ms var(--ease-out-expo),
+    opacity 160ms ease;
+  transition-behavior: allow-discrete;
+}
+
+.faq[open]::details-content,
+.mobile-menu[open]::details-content {
+  block-size: auto;
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .button:hover svg,
+  .contact-link:hover svg {
+    transform: translate3d(3px, 0, 0);
+  }
+
+  .team-member:hover .team-photo img,
+  .founder:hover .founder-photo img {
+    transform: scale(1.02);
+  }
+
+  .team-photo img,
+  .founder-photo img {
+    transition: transform 300ms var(--ease-out-expo);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  html.js [data-reveal] {
+  .site-header,
+  .hero > :first-child,
+  .about-image,
+  .company-art,
+  .events-mascot,
+  .collage-photo--one,
+  .collage-photo--two,
+  .collage-photo--three,
+  .hero-collage > .mascot {
+    animation: none;
+  }
+
+  html.motion-ready [data-reveal="block"],
+  html.motion-ready [data-reveal="list"] > * {
     opacity: 1;
-    translate: 0;
+    transform: none;
     transition: none;
+  }
+
+  .faq::details-content,
+  .mobile-menu::details-content {
+    transition: opacity 120ms ease;
+  }
+
+  .team-member:hover .team-photo img,
+  .founder:hover .founder-photo img,
+  .button:hover svg,
+  .contact-link:hover svg {
+    transform: none;
   }
 }

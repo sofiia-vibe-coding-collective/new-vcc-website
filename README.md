@@ -1,39 +1,72 @@
-# new-vcc-website
+# Vibe Coding Collective — four-page website
 
-Ground-up rebuild of the [Vibe Coding Collective](https://vibecoders.global/) website.
+A local, static rebuild of VCC with Home, About, Companies, and Events pages. Built on the original repository's Vite / TypeScript / HTML / CSS stack.
 
-The live site was produced with a Figma no-code process, so there is no source code to work from. An earlier developer attempt lives at [`vibe-coding-collective/website`](https://github.com/vibe-coding-collective/website); this repo starts over from scratch by studying the live site as a user and reverse-engineering it into code.
+## Run locally
 
-## How this repo is built: a native Claude Code orchestration setup
+Use Node 20.19+ or 22.12+.
 
-This project doubles as a testbed for a "big-orchestrator / worker-fleet" workflow using **only native Claude Code features** — no third-party frameworks. One model plans and delegates; a fleet of workers executes in parallel, each isolated in its own git worktree.
+```sh
+npm ci
+npm run dev -- --host 127.0.0.1
+```
 
-| Role | Model | Where it runs |
-|------|-------|---------------|
-| **Orchestrator** — plans, decomposes, integrates | **Fable 5** | the main Claude Code session you talk to |
-| **Workers** — build, review, test, research | **Opus 4.8** | subagents defined in `.claude/agents/` |
+Visit the URL printed by Vite. The current preview uses http://127.0.0.1:5181/.
 
-Both run at **max effort**.
+For this workspace, macOS had offloaded dependency files in the Desktop folder. The ignored node_modules entry therefore points to a local dependency cache at /private/tmp/vcc-website-runtime-01a13777/node_modules. The current preview serves the verified production build from the same cache. If that temporary cache is removed later, run npm ci to reinstall dependencies. Optional VCC_PUBLIC_DIR and VCC_BUILD_DIR environment variables let this local session serve assets and build output outside the cloud-synced folder; both default to normal project directories.
 
-### Operator quickstart
-1. Open this repo in Claude Code (desktop app or CLI).
-2. Confirm the session model is **Fable 5** — `.claude/settings.json` sets it as the default; otherwise pick it in the model selector (or `/model fable`).
-3. Set effort to max: `/effort max`.
-4. Workers are pinned to **Opus 4.8** via `CLAUDE_CODE_SUBAGENT_MODEL` in `.claude/settings.json`, so every subagent the orchestrator spawns runs on Opus — including the built-in general-purpose one. (This avoids the common gotcha where "use a subagent" silently inherits the caller's model.)
-5. Give the orchestrator your build brief. It plans, partitions the work into non-overlapping file ownership, and delegates to the worker roles below.
+Current session preview command:
 
-The full protocol the models follow lives in **[CLAUDE.md](./CLAUDE.md)**.
+```sh
+VCC_BUILD_DIR=/private/tmp/vcc-website-runtime-01a13777/dist npm run preview -- --host 127.0.0.1 --port 5181
+```
 
-## Worker roles (`.claude/agents/`)
-- **builder** — implements one scoped slice in an isolated worktree; owns only its files; writes tests; pushes a branch.
-- **reviewer** — adversarial review of a branch before merge (correctness, scope, contract drift, tests).
-- **tester** — runs the verification gate (typecheck / build / lint / tests) and reports real results.
-- **researcher** — studies the live site and produces the implementation spec under `docs/spec/`.
+For live source editing while the local cache exists:
 
-## Status
-**The clone is built.** All eleven sections (`src/sections/01-nav-sticky.html` → `11-footer.html`) are implemented against the specs in [`docs/spec/`](./docs/spec/) using the real recovered assets, and the full gate — `npm run verify` (typecheck · lint · tests · build) — is green. Deliberate departures from the original are logged in [DEVIATIONS.md](./docs/DEVIATIONS.md).
+```sh
+VCC_PUBLIC_DIR=/private/tmp/vcc-website-runtime-01a13777/public npm run dev -- --host 127.0.0.1
+```
 
-Not yet deployed to a host.
+Page routes: /, /about/, /companies/, /events/.
 
-## License
-MIT — see [LICENSE](./LICENSE).
+```sh
+npm run typecheck
+npm test
+npm run build
+npm run preview -- --host 127.0.0.1
+```
+
+The build writes four standalone documents into dist. A static host should serve the index.html within each page directory. No backend, account, or API credentials are required.
+
+## Content maintenance
+
+- The four files in content/ are copies of the supplied Markdown documents, with embedded reference-image data omitted. The originals in the parent workspace are untouched.
+- Five practical attendance FAQs, consolidated from the supplied Home and Events copy, live in src/site.ts and appear only on Events. Unanswered source questions remain omitted.
+- Curated section copy and reusable rendering components live in src/render.ts. Updating a section's prose requires updating its curated rendering copy. The raw Markdown is reference material for those sections.
+- Navigation, metadata, chapter destinations, team roster, testimonials, and image metadata live in src/site.ts.
+- Visual styles live in src/styles/site.css. Original reconstruction sections and styles are retained as historical reference, but are not bundled.
+- The extended Vite include plugin renders the shared header/footer and page body into HTML before delivery. Main content and native disclosures work without JavaScript.
+
+## Images and links
+
+Original VCC assets and Golos Text remain self-hosted under public/. Three supplementary fictional community photographs were created using the built-in ImageGen tool and optimised as WebP under public/assets/community/. Each rendered photograph has an “Illustrative image” caption. Prompts are documented in docs/IMAGE_PROMPTS.md.
+
+The Events page links to verified London and EU Meetup organiser pages. There is no live feed and no fabricated future event schedule. The evening timeline is clearly an example. Enquiry CTAs open an email to partnership@vibecoders.global with a contextual subject.
+
+## Content intentionally omitted
+
+Dan's unfinished biography; unanswered About and Companies FAQs; unfinished event count; missing PR snippets and company-specific endorsements; company registration details and the unavailable privacy policy. The Individual involvement section marked “added later” is not on Home; About includes the requested volunteer invitation. Team spelling follows the supplied Markdown, with existing portrait filenames mapped explicitly.
+
+## Editorial structure
+
+Home introduces VCC through community figures, supporters, projects, event formats, and one complete participant quote. About explains folk software and the principles, then shows the community map with a readable example city list, team, and one volunteer invitation. Companies presents the partnership offer, figures, contribution options, benefits, and partnership enquiry actions in its hero and closing section. Events leads with distinctly named organiser links, levels, an example timetable, and five practical FAQs. Decorative eyebrow labels, repeated slogans, numbering, and promotional footer copy have been removed; functional labels and image disclosures remain.
+
+## Design
+
+Cream, ink, green, orange, yellow, teal, and VCC mascots preserve the original identity. The layouts introduce more candid imagery, asymmetric collage, open typographic sections, and restrained CSS feedback. Mobile navigation and FAQs use native details elements. Enhanced mobile navigation closes on Escape and outside click, with focus restored on Escape. Reduced motion disables decorative movement.
+
+Interface review improvements use rem-based text sizes and breakpoints, shrinkable grid tracks, and wrapping controls for enlarged browser fonts. Principle statements and the testimonial use 1.4 line-height; image disclosures and team roles start at 13px. Focus uses blue on light surfaces and paper on dark panels. The Companies header event action is secondary, and the mobile menu opens without an entrance animation.
+
+## GitHub Pages
+
+The `Publish site` workflow checks, builds, and deploys the site whenever `main` is pushed. The build uses the repository name as its base path so navigation and assets work on GitHub Pages. In the repository's Pages settings, choose **GitHub Actions** as the build source.

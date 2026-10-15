@@ -1,90 +1,52 @@
 /// <reference types="vitest/config" />
-import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
-
-/**
- * Build-time HTML includes — inline, dependency-free.
- *
- * Marker syntax in index.html:  <!-- @include: src/sections/01-nav-sticky.html -->
- * Each marker is replaced with the referenced file's contents at DEV and BUILD
- * time (transformIndexHtml, order 'pre'). A missing file is a hard error that
- * fails the build, naming the marker. In dev, editing any src/sections/*.html
- * triggers a full reload.
- */
-const INCLUDE_RE = /<!--\s*@include:\s*(\S+?)\s*-->/g
+import { renderInclude } from './src/render'
+import type { PageId } from './src/site'
 
 function htmlIncludes(): Plugin {
   let root = process.cwd()
+  let base = '/'
   return {
     name: 'vcc-html-includes',
     configResolved(config) {
       root = config.root
+      base = config.base
     },
     transformIndexHtml: {
       order: 'pre',
-      handler(html) {
-        return html.replace(INCLUDE_RE, (_marker, file: string) => {
-          const abs = resolve(root, file)
-          try {
-            return readFileSync(abs, 'utf8')
-          } catch {
-            throw new Error(
-              `[vcc-html-includes] missing include "${file}" (resolved: ${abs}). ` +
-                'Every "<!-- @include: … -->" marker must point at an existing file.',
-            )
-          }
-        })
+      handler(html, context) {
+        const route = context.path.split('/').filter(Boolean)[0]
+        const page: PageId = route === 'about' || route === 'companies' || route === 'events' ? route : 'home'
+        return html.replace(/<!--\s*@include:\s*(\S+?)\s*-->/g, (_marker, name: string) =>
+          renderInclude(name, page).replace(/href="\//g, `href="${base}`))
       },
     },
     configureServer(server) {
-      const dir = resolve(root, 'src/sections')
-      server.watcher.add(dir)
+      server.watcher.add(resolve(root, 'content'))
       server.watcher.on('change', (file) => {
-        if (file.startsWith(dir) && file.endsWith('.html')) {
-          server.ws.send({ type: 'full-reload' })
-        }
+        if (file.endsWith('.md') || file.endsWith('render.ts') || file.endsWith('site.ts')) server.ws.send({ type: 'full-reload' })
       })
     },
   }
 }
-
-/**
- * Build-only HTML comment stripper. Runs at transformIndexHtml order 'post' — i.e.
- * AFTER htmlIncludes (order 'pre') has inlined every "<!-- @include: … -->" marker —
- * so it only ever sees real section markup, never the include markers, and thus
- * cannot break the include mechanism or its missing-file hard error. `apply: 'build'`
- * keeps the dev server (and the section files' live working-documentation comments)
- * untouched. Only the comment spans themselves are removed; every surrounding byte is
- * preserved, so all non-comment content stays byte-identical. Downlevel/conditional
- * comments ("<!--[if …]>") are preserved defensively — none exist today.
- */
-const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g
-function stripHtmlComments(): Plugin {
-  return {
-    name: 'vcc-strip-html-comments',
-    apply: 'build',
-    transformIndexHtml: {
-      order: 'post',
-      handler(html) {
-        return html.replace(HTML_COMMENT_RE, (comment) =>
-          /^<!--\s*\[/.test(comment) ? comment : '',
-        )
+export default defineConfig({
+  plugins: [htmlIncludes()],
+  publicDir: process.env.VCC_PUBLIC_DIR || 'public',
+  build: {
+    outDir: process.env.VCC_BUILD_DIR || 'dist',
+    rollupOptions: {
+      input: {
+        home: resolve(process.cwd(), 'index.html'),
+        about: resolve(process.cwd(), 'about/index.html'),
+        companies: resolve(process.cwd(), 'companies/index.html'),
+        events: resolve(process.cwd(), 'events/index.html'),
       },
     },
-  }
-}
-
-export default defineConfig({
-  plugins: [htmlIncludes(), stripHtmlComments()],
+  },
   test: {
     environment: 'happy-dom',
-    /* Vitest's default `exclude` covers node_modules/ and dist/ but NOT .claude/ —
-       where worker git worktrees live. Without this, a gate run in the main checkout
-       silently ALSO executes every worktree's copy of every test (43 real tests read
-       as 86), so main's gate could go green on a worktree's code or red on a worker's
-       half-finished edit. Mirrors eslint.config.js's `.claude/**` ignore; tsconfig is
-       already safe because it includes only ["src", "vite.config.ts"]. */
+    include: ['src/**/*.test.ts'],
     exclude: ['**/node_modules/**', '**/dist/**', '.claude/**'],
   },
 })

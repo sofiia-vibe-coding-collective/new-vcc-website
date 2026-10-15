@@ -1,86 +1,25 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vibe Coding Collective</title>
-    <meta
-      name="description"
-      content="Join thousands of new creators building with GenAI in pubs, studios, and community spaces around the globe!"
-    />
-
-    <!--
-      Icons. Generated from public/assets/nav-sticky/logo-nav.svg — that SVG is 326kB
-      (21 detailed lettering paths), so it is NOT served as a favicon; these rasters are.
-      apple-touch-icon is flattened onto brand blue because iOS composites transparency
-      on black before applying its own squircle mask.
-    -->
-    <link rel="icon" href="/favicon.ico" sizes="32x32" />
-    <link rel="icon" href="/favicon-192.png" type="image/png" sizes="192x192" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="theme-color" content="#fde9c9" />
-
-    <!--
-      Canonical + social. Absolute URLs are REQUIRED here: scrapers do not resolve
-      relative og:image paths. They must point at WWW, the primary domain — not the
-      apex, which 308-redirects to www. A redirecting og:image is a known cause of
-      share cards rendering with no image, because several scrapers refuse to follow
-      one. If the primary ever moves back to the apex, these four URLs move with it.
-    -->
-    <link rel="canonical" href="https://www.vibecoders.global/" />
-
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Vibe Coding Collective" />
-    <meta property="og:url" content="https://www.vibecoders.global/" />
-    <meta property="og:title" content="Vibe Coding Collective" />
-    <meta
-      property="og:description"
-      content="Join thousands of new creators building with GenAI in pubs, studios, and community spaces around the globe!"
-    />
-    <meta property="og:image" content="https://www.vibecoders.global/og-image.png" />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta
-      property="og:image:alt"
-      content="The Vibe Coding Collective logo above the headline '4,000+ members are already here'."
-    />
-
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Vibe Coding Collective" />
-    <meta
-      name="twitter:description"
-      content="Join thousands of new creators building with GenAI in pubs, studios, and community spaces around the globe!"
-    />
-    <meta name="twitter:image" content="https://www.vibecoders.global/og-image.png" />
-  </head>
-  <body>
-    <!--
-      Landmarks: <header> banner (holds the pinned nav) · <main id="app"> (the
-      page content, sections 02–10) · <footer> contentinfo (section 11's root).
-      Sections are separate files inlined at build time by the vcc-html-includes
-      Vite plugin (see vite.config.ts / docs/ARCHITECTURE.md). DOM order is
-      nav-FIRST — a deliberate deviation from the original's nav-last overlay
-      (see docs/DEVIATIONS.md).
-    -->
-    <header>
-      <!-- @include: src/sections/01-nav-sticky.html -->
-    </header>
-
-    <main id="app">
-      <!-- @include: src/sections/02-hero-header.html -->
-      <!-- @include: src/sections/03-stats.html -->
-      <!-- @include: src/sections/04-for-vibe-coders.html -->
-      <!-- @include: src/sections/05-project-showcase.html -->
-      <!-- @include: src/sections/06-for-city-leaders.html -->
-      <!-- @include: src/sections/07-for-sponsors.html -->
-      <!-- @include: src/sections/08-reviews.html -->
-      <!-- @include: src/sections/09-for-companies.html -->
-      <!-- @include: src/sections/10-contact-cta.html -->
-    </main>
-
-    <!-- @include: src/sections/11-footer.html -->
-
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#fde9c9">
+  <title>Vibe Coding Collective — Make software together</title>
+  <meta name="description" content="Meet people in pubs, studios and community spaces to build software with AI. No coding experience needed.">
+  <meta property="og:title" content="Vibe Coding Collective — Make software together">
+  <meta property="og:description" content="Meet people in pubs, studios and community spaces to build software with AI. No coding experience needed.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/og-image.png">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preload" href="/fonts/golos-text-latin.woff2" as="font" type="font/woff2" crossorigin>
+</head>
+<body data-page="home">
+  <!-- @include: shared:header -->
+  <main id="app" tabindex="-1">
+    <!-- @include: page:body -->
+  </main>
+  <!-- @include: shared:footer -->
+  <script type="module" src="/src/main.ts"></script>
+</body>
 </html>

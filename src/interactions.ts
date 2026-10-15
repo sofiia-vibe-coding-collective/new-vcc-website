@@ -1,132 +1,107 @@
-/**
- * Site-wide interactions — plain TypeScript, zero dependencies.
- *
- * Implements the interaction contract in docs/ARCHITECTURE.md §9 and the behavior
- * spec docs/spec/40-interactions.md:
- *
- *   1. Smooth in-page scrolling. A single delegated click listener resolves the
- *      nearest [data-scroll-target] ancestor of the click and scrolls the element
- *      with that id into view (`block: 'start'`). Uses `behavior: 'auto'` under
- *      `prefers-reduced-motion: reduce`. (Scroll-padding-top for the fixed nav is
- *      handled globally via the --nav-height token in base.css.)
- *
- *   2. Scroll reveal. `<html>` is stamped with the `js` class at init — the no-JS
- *      gate for the reveal CSS (src/styles/interactions.css). An IntersectionObserver
- *      then adds `is-revealed` to each [data-reveal] block on its first viewport
- *      entry and stops observing it. Under reduced-motion (or with no
- *      IntersectionObserver support) every block is revealed immediately.
- *
- * This module only toggles the `js` / `is-revealed` classes and performs the
- * scroll; ALL reveal presentation lives in src/styles/interactions.css. It
- * self-initializes on load (main.ts does `import './interactions'`; main.ts is a
- * deferred ES module, so the DOM is fully parsed by then) — except under Vitest,
- * where the self-call is gated off so importing the module leaks no document-level
- * listener into unit tests; those call `initInteractions()` explicitly.
- */
+const revealPlan = {
+  block: [
+    '.section-head',
+    '.partners > .micro-label',
+    '.formats-panel',
+    '.single-quote',
+    '.manifesto',
+    '.principles-panel > .section-head',
+    '.map-panel',
+    '.volunteer-row',
+    '.company-return',
+    '.photo--wide',
+    '.level-panel > div:first-child',
+    '.evening > div:first-child',
+    '.faq-intro',
+    '.footer-art',
+    '.footer-links',
+    '.footer-bottom',
+  ],
+  list: [
+    '.proof-strip',
+    '.partner-logos',
+    '.project-grid',
+    '.principles',
+    '.founders',
+    '.team-grid',
+    '.impact-stats',
+    '.partnership-options',
+    '.chapter-grid',
+    '.level-list',
+    '.schedule',
+    '.faq-list',
+  ],
+} as const
 
-const SCROLL_TARGET_ATTR = 'data-scroll-target'
-const REVEAL_SELECTOR = '[data-reveal]'
-const JS_CLASS = 'js'
-const REVEALED_CLASS = 'is-revealed'
-/** ~10–15% visible on entry (spec §40.1); 0.1 stays reachable for tall blocks. */
-const REVEAL_THRESHOLD = 0.1
+function prepareRevealTargets(doc: Document): HTMLElement[] {
+  const targets = new Set<HTMLElement>()
 
-/**
- * The browser global scope. `IntersectionObserver` (and other constructors) live
- * on `typeof globalThis`, not the bare `Window` interface, so we intersect the two
- * to read them off an injected window (which keeps the module fully unit-testable).
- */
-type BrowserWindow = Window & typeof globalThis
+  for (const [kind, selectors] of Object.entries(revealPlan)) {
+    for (const selector of selectors) {
+      for (const element of doc.querySelectorAll<HTMLElement>(selector)) {
+        if (targets.has(element)) continue
+        element.dataset.reveal = kind
+        targets.add(element)
 
-/** True when the user has asked the OS to minimize motion. */
-function prefersReducedMotion(win: BrowserWindow): boolean {
-  return win.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+        if (kind === 'list') {
+          for (const [index, child] of Array.from(element.children).entries()) {
+            if (child instanceof HTMLElement) {
+              child.style.setProperty('--reveal-order', String(index % 4))
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return Array.from(targets)
 }
 
-/**
- * Delegated click handler for smooth in-page scrolling. Resolves the nearest
- * [data-scroll-target] ancestor of the event target (so clicks on markup nested
- * inside a trigger still work) and scrolls its target id into view. No-ops when
- * there is no trigger, no target id, or no element with that id.
- */
-export function handleScrollClick(
-  event: Event,
-  doc: Document = document,
-  win: BrowserWindow = window,
-): void {
-  const origin = event.target
-  if (!(origin instanceof Element)) return
-  const trigger = origin.closest(`[${SCROLL_TARGET_ATTR}]`)
-  if (!trigger) return
-  const id = trigger.getAttribute(SCROLL_TARGET_ATTR)
-  if (!id) return
-  const destination = doc.getElementById(id)
-  if (!destination) return
-  const behavior: ScrollBehavior = prefersReducedMotion(win) ? 'auto' : 'smooth'
-  destination.scrollIntoView({ behavior, block: 'start' })
-}
+/** Enhances native navigation and adds one-shot, progressively-enhanced reveals. */
+export function initInteractions(doc: Document = document): () => void {
+  const root = doc.documentElement
+  const view = doc.defaultView
+  const menu = doc.querySelector<HTMLDetailsElement>('.mobile-menu')
+  const trigger = menu?.querySelector<HTMLElement>('summary')
+  const revealTargets = prepareRevealTargets(doc)
+  const prefersReducedMotion = view?.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+  let observer: IntersectionObserver | undefined
 
-/** Stamp <html> with the `js` class — the no-JS gate for the reveal CSS. */
-export function stampJsClass(root: HTMLElement): void {
-  root.classList.add(JS_CLASS)
-}
+  root.classList.add('motion-ready')
 
-/** Mark a single block as revealed. */
-export function revealElement(element: Element): void {
-  element.classList.add(REVEALED_CLASS)
-}
-
-/**
- * Build the reveal IntersectionObserver: reveals each block on first entry, then
- * unobserves it. Returns null when the environment has no IntersectionObserver
- * (the caller then reveals everything immediately).
- */
-export function createRevealObserver(win: BrowserWindow): IntersectionObserver | null {
-  if (typeof win.IntersectionObserver === 'undefined') return null
-  return new win.IntersectionObserver(
-    (entries, observer) => {
+  if (prefersReducedMotion || !view?.IntersectionObserver) {
+    for (const target of revealTargets) target.classList.add('is-revealed')
+  } else {
+    observer = new view.IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue
-        revealElement(entry.target)
-        observer.unobserve(entry.target)
+        entry.target.classList.add('is-revealed')
+        observer?.unobserve(entry.target)
       }
-    },
-    { threshold: REVEAL_THRESHOLD },
-  )
-}
+    }, { rootMargin: '0px 0px -10% 0px', threshold: 0.08 })
 
-/**
- * Wire scroll-reveal for every [data-reveal] block. Under reduced-motion — or with
- * no IntersectionObserver support — every block is revealed immediately; otherwise
- * each is observed and revealed once on entry.
- */
-export function setupReveal(doc: Document = document, win: BrowserWindow = window): void {
-  const blocks = doc.querySelectorAll(REVEAL_SELECTOR)
-  if (prefersReducedMotion(win)) {
-    blocks.forEach(revealElement)
-    return
+    for (const target of revealTargets) observer.observe(target)
   }
-  const observer = createRevealObserver(win)
-  if (!observer) {
-    blocks.forEach(revealElement)
-    return
+
+  const keydown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape' && menu?.open) {
+      menu.open = false
+      trigger?.focus()
+    }
   }
-  blocks.forEach((block) => observer.observe(block))
-}
+  const click = (event: MouseEvent) => {
+    const target = event.target
+    if (!menu || !(target instanceof Element)) return
+    if (!menu.contains(target) || target.closest('a')) menu.open = false
+  }
 
-/** Wire every interaction. Safe to call once the DOM is parsed. */
-export function initInteractions(doc: Document = document, win: BrowserWindow = window): void {
-  stampJsClass(doc.documentElement)
-  doc.addEventListener('click', (event) => handleScrollClick(event, doc, win))
-  setupReveal(doc, win)
-}
+  doc.addEventListener('keydown', keydown)
+  doc.addEventListener('click', click)
 
-// Self-initialize on load in the browser (dev + production build). main.ts loads this
-// as a deferred module, so the DOM (including the footer) is already parsed here. The
-// guard skips this under Vitest (import.meta.env.MODE === 'test') so importing the module
-// in a unit test does not leak a persistent document click listener; tests call
-// initInteractions() explicitly. import.meta.env.MODE is a Vite-static string, so this
-// tree-shakes to a constant (initInteractions() always runs) in the production bundle.
-if (import.meta.env.MODE !== 'test') {
-  initInteractions()
+  return () => {
+    observer?.disconnect()
+    doc.removeEventListener('keydown', keydown)
+    doc.removeEventListener('click', click)
+    root.classList.remove('motion-ready')
+  }
 }

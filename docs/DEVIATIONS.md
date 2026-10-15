@@ -13,6 +13,18 @@ Legend: **[arch]** structural · **[content]** copy/data · **[a11y]** accessibi
 
 ## Structure & semantics
 
+### Current four-page interface improvements — 2026-10-14
+
+These approved improvements apply to the active four-page implementation, rather than the historical eleven-section reconstruction described below.
+
+- **[a11y] Scalable typography and layout:** active font sizes and responsive breakpoint thresholds use rem units. Fractional grid tracks can shrink, long values wrap, statistics adapt to available space, and the mobile header can wrap at enlarged text sizes. Default font size remains controlled by the browser.
+- **[a11y] Surface-aware focus:** the semantic `--color-focus` token uses blue on light backgrounds and paper on green, blue, and ink surfaces, preserving the 3px outline and 6px offset.
+- **[content/a11y] Readable communities:** the About map retains its artwork and gains a wrapping list introduced by “Communities include,” listing the seven example cities already described by its alt text. This is not a claim of an exhaustive current chapter roster.
+- **[content] Partnership hierarchy:** Companies gains a hero enquiry action using the existing contextual email destination, retains its closing enquiry action, and renders the header event action with the secondary light treatment.
+- **[content] Destination labels:** Events uses “View London events” and “View European events,” preserving both organiser URLs.
+- **[a11y] Reading comfort:** principle statements and the testimonial use 1.4 line-height; image disclosures and team roles use 0.8125rem. These intentionally differ from the previous compact typography.
+- **[approx] Mobile menu feedback:** the entrance keyframes are removed; native details behavior and the keyboard/outside-click enhancement remain.
+
 - **[arch] Single semantic DOM instead of three `data-breakpoint` DOM copies.** The
   original renders all three breakpoint variants into the DOM and toggles them with
   `display:none`. We author each section once and adapt with media queries — smaller,
